@@ -49,25 +49,27 @@ int copy_content(const char * path, const char * dst_path)
     FILE * subfile; 
     FILE * copyfile;
     int ch;
-
     subfile = fopen(path, "r");
+   
+    if (subfile == NULL) {
+        printf("error opening original file\n");
+        return 1;
+    }
+
     copyfile = fopen(dst_path, "w");
 
     if (copyfile == NULL) {
-        printf("error opening copyfile");
+        printf("error opening copyfile, dst_path = %s \n", dst_path);
+        fclose(subfile);
         return 1;
     }
-    if (subfile == NULL) {
-        printf("error opening original file");
-        return 1;
-    }
-
     while ((ch = fgetc(subfile)) != EOF) {
         // printf("%c\n", ch);
         fputc(ch, copyfile);
     }
     fclose(subfile);
     fclose(copyfile);
+    copyfile = NULL;
     return 0;    
 }
 
@@ -79,90 +81,88 @@ int cpy_file_path (char * filepath, char * relative_path_dr, char * filename)
     strcat(copyfilepath, "/");
     strcat(copyfilepath, filename);
     
-    copy_content(filepath, copyfilepath);
-
+    int res = copy_content(filepath, copyfilepath);
+    if (res == 1) {
+        return 1;
+    }
     free(copyfilepath);
+    return 0;
+}
+
+char * getWkPath() {
+    return "../sample";
+}
+
+int dupl_dir_content (char * source_path, char * dest_path)
+{
+    struct dirent *de;
+    DIR * dr = opendir(source_path);
+    const char linuxDir[3] = "..";
+    const char linuxDir2[2] = ".";
+
+    if (dr == NULL) {
+        printf("Could not open directory");
+        return 1;
+    }
+
+    while((de = readdir(dr)) != NULL) {
+        char * subdir_path = s_malloc(sizeof (char) * (strlen(source_path) + strlen(de->d_name) + 2));
+        strcpy(subdir_path, source_path);
+        strcat(subdir_path, "/");
+        strcat(subdir_path, de->d_name);
+
+        if (strcmp(de->d_name, linuxDir) == 0 || strcmp(de->d_name, linuxDir2) == 0) {
+            free(subdir_path);
+            continue;
+        }
+
+        if (is_directory(subdir_path) > 0) {
+            char * dest_subdir_path = s_malloc(sizeof (char) * (strlen(dest_path) + strlen(de->d_name) + 2));
+            strcpy(dest_subdir_path, dest_path);
+            strcat(dest_subdir_path, "/");
+            strcat(dest_subdir_path, de->d_name);
+
+            // duplicate dir
+            create_dir(dest_subdir_path);
+
+            // duplicate dir content
+            dupl_dir_content(subdir_path, dest_subdir_path);
+            printf("copy folder %s to %s -- OK \n", subdir_path, dest_subdir_path);
+            free(dest_subdir_path);
+            dest_subdir_path = NULL;
+            free(subdir_path);
+            subdir_path = NULL;
+        } else {
+            
+            // if the content is a file make copie of file
+            char * org_filepath = s_malloc(sizeof (char) * (strlen(subdir_path) + 1));
+            strcpy(org_filepath, subdir_path);
+            int res = cpy_file_path(org_filepath, dest_path, de->d_name);
+            if (res == 1) {
+                printf("error copying file");
+            } else {
+                printf("copy file %s to %s -- OK \n", org_filepath, dest_path);
+            }
+            free(org_filepath);
+            org_filepath = NULL;
+            free(subdir_path);
+            subdir_path = NULL;
+        }
+    }
+    closedir(dr);
+    return 0;
 }
  
 int snapshot() 
 {
     struct dirent *de;
-    char path[] = "../sample";
     const char linuxDir[3] = "..";
     const char linuxDir2[2] = ".";
-    DIR *dr = opendir(path);
 
-    if (dr == NULL) {
-        printf("Could not open directory");
-        return 0;
-    }
+    char * path = getWkPath();
+    char * dst_path = WORK_DIR;
 
-    while((de = readdir(dr)) != NULL) {
-        char * subdir_path = s_malloc(sizeof (char) * (strlen(path) + strlen(de->d_name) + 2));
-        char * relative_path_subdr = s_malloc(sizeof (char) * strlen(WORK_DIR) + 1);
-
-        strcpy(subdir_path, path);
-        strcat(subdir_path, "/");
-        strcat(subdir_path, de->d_name);
-        
-        strcpy(relative_path_subdr, WORK_DIR);
-      
-        if (strcmp(de->d_name, linuxDir) == 0 || strcmp(de->d_name, linuxDir2) == 0) {
-            free(relative_path_subdr);
-            free(subdir_path);
-            continue;
-        }
-        if (is_directory(subdir_path) > 0) {
-            DIR *subd = opendir(subdir_path);
-            struct dirent *subde;
-            
-            relative_path_subdr = s_realloc(relative_path_subdr, sizeof (char) * (strlen(WORK_DIR) + strlen(de->d_name) + 2));
-            strcat(relative_path_subdr, "/");
-            strcat(relative_path_subdr, de->d_name);
-            
-            create_dir(relative_path_subdr);
-            
-            while ((subde = readdir(subd)) != NULL) {
-                char * filepath = s_malloc(sizeof (char) * (strlen(subdir_path) + strlen(subde->d_name) + 2));
-                strcpy(filepath, subdir_path);
-                
-                strcat(filepath, "/");
-                strcat(filepath, subde->d_name);
-
-                if (strcmp(subde->d_name, linuxDir) == 0 || strcmp(subde->d_name, linuxDir2) == 0) {
-                    free(filepath);
-                    continue;
-                }
-                // read content if a file
-                if (is_directory(filepath) == 0) {
-                    int res = cpy_file_path(filepath, relative_path_subdr, subde->d_name);
-                    if (res == 1) {
-                        printf("error copying file");
-                    }
-                } else {
-                    // printf("read directory content");
-                }
-                free(filepath);
-            }
-            closedir(subd);
-        } else {
-            printf("%s is not a directory", subdir_path);
-
-            // if the content is a file make copie of file
-            char * org_filepath = s_malloc(sizeof (char) * (strlen(subdir_path) + 1));
-            strcpy(org_filepath, subdir_path);
-            printf("\ncreate file %s, subdirpath: %s, filename: \"%s\" ", org_filepath, relative_path_subdr, de->d_name);
-            int res = cpy_file_path(org_filepath, relative_path_subdr, de->d_name);
-            if (res == 1) {
-                printf("error copying file");
-            }
-            free(org_filepath);
-        }
-        free(relative_path_subdr);
-        free(subdir_path);
-    //     printf("\n");
-    }
-    closedir(dr);
+    dupl_dir_content(path, dst_path);
     return 0;
 }
 
