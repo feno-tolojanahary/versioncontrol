@@ -93,12 +93,43 @@ char * getWkPath() {
     return "../sample";
 }
 
+void compare_file (char * newfile_path, char * extfile_path)
+{
+    FILE * filenew;
+    FILE * existfile;
+    long int topsize = 0;
+    int ch;
+    filenew = fopen(newfile_path, "r");
+    existfile = fopen(extfile_path, "r");
+
+    if (filenew == NULL) {
+        print("error opening new file \n");
+        return;
+    }
+
+    if (oldfile == NULL) {
+        printf("error opening existing file \n");
+        return;
+    }
+
+    fseek(filenew, 0L, SEEK_END);
+    long int fnew_size = ftell(filenew);
+    rewind(filenew);
+    fseek(existfile, 0L, SEEK_END);
+    long int fexist_size = ftell(existfile);
+    rewind(existfile);
+
+    topsize = fnew_size > fexist_size ? fnew_size : fexist_size;
+
+    return topsize;
+}
+
 int dupl_dir_content (char * source_path, char * dest_path)
 {
     struct dirent *de;
     DIR * dr = opendir(source_path);
     const char linuxDir[3] = "..";
-    const char linuxDir2[2] = ".";
+    const char linuxDir2[2] = ".";  
 
     if (dr == NULL) {
         printf("Could not open directory");
