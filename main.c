@@ -8,6 +8,8 @@
 
 #define WORK_DIR "backup"
 
+int max(int a, int b);
+
 void create_dir(char * dir_name) 
 {
     struct stat st = {0};
@@ -17,7 +19,7 @@ void create_dir(char * dir_name)
 }
 
 int is_directory(const char * path) 
-{
+{   
     struct stat astatbuf;
     if (stat(path, &astatbuf) != 0) 
         return 0;
@@ -93,36 +95,125 @@ char * getWkPath() {
     return "../sample";
 }
 
-void compare_file (char * newfile_path, char * extfile_path)
+// char* lcs(char *X, char *Y) {
+//     int m = strlen(X);
+//     int n = strlen(Y);
+
+//     // Create a 2D table to store LCS lengths
+//     int L[m+1][n+1];
+
+//     // Fill L[][] using bottom-up DP
+//     for (int i = 0; i <= m; i++) {
+//         for (int j = 0; j <= n; j++) {
+//             if (i == 0 || j == 0)
+//                 L[i][j] = 0;
+//             else if (X[i-1] == Y[j-1])
+//                 L[i][j] = L[i-1][j-1] + 1;
+//             else
+//                 L[i][j] = (L[i-1][j] > L[i][j-1]) ? L[i-1][j] : L[i][j-1];
+//         }
+//     }
+
+//     // Length of LCS
+//     int index = L[m][n];
+//     printf("index: %d", index);
+//     // Allocate space for LCS string (+1 for null terminator)
+//     char* lcsStr = (char*)malloc((index + 1) * sizeof(char));
+//     lcsStr[index] = '\0';  // null-terminate the string
+
+//     // Trace back from L[m][n]
+//     int i = m, j = n;
+//     while (i > 0 && j > 0) {
+//         if (X[i - 1] == Y[j - 1]) {
+//             lcsStr[--index] = X[i - 1];
+//             i--; j--;
+//         } else if (L[i - 1][j] > L[i][j - 1]) {
+//             i--;
+//         } else {
+//             j--;
+//         }
+//     }
+
+//     return lcsStr; // caller must free this memory
+// }
+char* lcs(const char* s1, const char* s2)
 {
-    FILE * filenew;
-    FILE * existfile;
-    long int topsize = 0;
-    int ch;
-    filenew = fopen(newfile_path, "r");
-    existfile = fopen(extfile_path, "r");
+    int m = strlen(s1); 
+    int n = strlen(s2);
 
-    if (filenew == NULL) {
-        print("error opening new file \n");
-        return;
+    int dp[m+1][n+1];
+
+    for (int i = 0; i <= m; i++) {
+        for (int j = 0; j <= n; j++) {
+            if (i == 0 || j == 0)
+                dp[i][j] = 0;
+            if (s1[i-1] == s2[i-1]) {
+                dp[i][j] = dp[i-1][j-1] + 1;
+            } else { 
+                // dp[i][j] = max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
     }
 
-    if (oldfile == NULL) {
-        printf("error opening existing file \n");
-        return;
+    int index = dp[m][n];
+
+    printf("index: %d \n", index);
+    
+    char * lcsStr = (char *)malloc((index + 1) * sizeof(char))  ;
+    lcsStr[index] = '\0';
+
+    int i = m, j = n;
+    while (i > 0 && j > 0) {
+        if (s1[i - 1] == s2[j - 1]) {
+            lcsStr[--index] = s1[i - 1];
+            i--;
+            j--;
+        } else if (dp[i - 1][j] > dp[i][j - 1]) {
+            i--;
+        } else {
+            j--;
+        }
     }
-
-    fseek(filenew, 0L, SEEK_END);
-    long int fnew_size = ftell(filenew);
-    rewind(filenew);
-    fseek(existfile, 0L, SEEK_END);
-    long int fexist_size = ftell(existfile);
-    rewind(existfile);
-
-    topsize = fnew_size > fexist_size ? fnew_size : fexist_size;
-
-    return topsize;
+    return lcsStr;
 }
+
+int max(int a, int b) {
+    if (a > b) {
+        return a;
+    }
+    return b;
+}
+
+// void compare_file (char * newfile_path, char * extfile_path)
+// {
+//     FILE * filenew;
+//     FILE * existfile;
+//     long int topsize = 0;
+//     int ch;
+//     filenew = fopen(newfile_path, "r");
+//     existfile = fopen(extfile_path, "r");
+
+//     if (filenew == NULL) {
+//         printf("error opening new file \n");
+//         return;
+//     }
+    
+//     if (existfile == NULL) {
+//         printf("error opening existing file \n");
+//         return;
+//     }
+
+//     fseek(filenew, 0L, SEEK_END);
+//     long int fnew_size = ftell(filenew);
+//     rewind(filenew);
+//     fseek(existfile, 0L, SEEK_END);
+//     long int fexist_size = ftell(existfile);
+//     rewind(existfile);
+
+//     topsize = fnew_size > fexist_size ? fnew_size : fexist_size;
+
+//     return topsize;
+// }
 
 int dupl_dir_content (char * source_path, char * dest_path)
 {
@@ -199,7 +290,15 @@ int snapshot()
 
 int main(int argc, char * argv) 
 {
-    create_dir(WORK_DIR);
-    snapshot();
+    // create_dir(WORK_DIR);
+    // snapshot();
+
+    char str1[] = "AGGTAB";
+    char str2[] = "GXTXAYB";
+    lcs(str1, str2);
+    char * result = lcs(str1, str2);
+    printf("result lcs: \"%s\" \n", result);  
+    free(result);
+
     return 0;
 }
