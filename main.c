@@ -10,6 +10,14 @@
 
 int max(int a, int b);
 
+enum Action { INSERT, DELETE };
+
+struct Update {
+    Action type;
+    char ch;
+    int pos;
+}
+
 void create_dir(char * dir_name) 
 {
     struct stat st = {0};
@@ -18,7 +26,7 @@ void create_dir(char * dir_name)
     }
 }
 
-int is_directory(const char * path) 
+int is_directory(const char * path) ee
 {   
     struct stat astatbuf;
     if (stat(path, &astatbuf) != 0) 
@@ -92,50 +100,9 @@ int cpy_file_path (char * filepath, char * relative_path_dr, char * filename)
 }
 
 char * getWkPath() {
-    return "../sample";
+    return "../sample"; 
 }
 
-// char* lcs(char *X, char *Y) {
-//     int m = strlen(X);
-//     int n = strlen(Y);
-
-//     // Create a 2D table to store LCS lengths
-//     int L[m+1][n+1];
-
-//     // Fill L[][] using bottom-up DP
-//     for (int i = 0; i <= m; i++) {
-//         for (int j = 0; j <= n; j++) {
-//             if (i == 0 || j == 0)
-//                 L[i][j] = 0;
-//             else if (X[i-1] == Y[j-1])
-//                 L[i][j] = L[i-1][j-1] + 1;
-//             else
-//                 L[i][j] = (L[i-1][j] > L[i][j-1]) ? L[i-1][j] : L[i][j-1];
-//         }
-//     }
-
-//     // Length of LCS
-//     int index = L[m][n];
-//     printf("index: %d", index);
-//     // Allocate space for LCS string (+1 for null terminator)
-//     char* lcsStr = (char*)malloc((index + 1) * sizeof(char));
-//     lcsStr[index] = '\0';  // null-terminate the string
-
-//     // Trace back from L[m][n]
-//     int i = m, j = n;
-//     while (i > 0 && j > 0) {
-//         if (X[i - 1] == Y[j - 1]) {
-//             lcsStr[--index] = X[i - 1];
-//             i--; j--;
-//         } else if (L[i - 1][j] > L[i][j - 1]) {
-//             i--;
-//         } else {
-//             j--;
-//         }
-//     }
-
-//     return lcsStr; // caller must free this memory
-// }
 char* lcs(const char* s1, const char* s2)
 {
     int m = strlen(s1); 
@@ -145,27 +112,25 @@ char* lcs(const char* s1, const char* s2)
 
     for (int i = 0; i <= m; i++) {
         for (int j = 0; j <= n; j++) {
-            if (i == 0 || j == 0)
+            if (i == 0 || j == 0) {
                 dp[i][j] = 0;
-            if (s1[i-1] == s2[i-1]) {
+            } else if (s1[i-1] == s2[j-1]) {
                 dp[i][j] = dp[i-1][j-1] + 1;
             } else { 
-                // dp[i][j] = max(dp[i - 1][j], dp[i][j - 1]);
+                dp[i][j] = max(dp[i-1][j], dp[i][j-1]);
             }
         }
     }
 
     int index = dp[m][n];
-
-    printf("index: %d \n", index);
     
     char * lcsStr = (char *)malloc((index + 1) * sizeof(char))  ;
     lcsStr[index] = '\0';
 
     int i = m, j = n;
     while (i > 0 && j > 0) {
-        if (s1[i - 1] == s2[j - 1]) {
-            lcsStr[--index] = s1[i - 1];
+        if (s1[i-1] == s2[j-1]) {
+            lcsStr[--index] = s1[i-1];
             i--;
             j--;
         } else if (dp[i - 1][j] > dp[i][j - 1]) {
@@ -176,6 +141,35 @@ char* lcs(const char* s1, const char* s2)
     }
     return lcsStr;
 }
+
+void generateUpdateScript(char* orig, char* mod, char* lcs) {   
+    int i = 0, j = 0, k = 0;
+    int pos = 0;
+
+    while(orig[i] || mod[j]) {
+        if (lcs[k] && orig[i] == lcs[k] && mod[j] == lcs[k]) {
+
+            i++; j++; pos++;
+        } else if (lcs[k] && orig[i] == lcs[k]) {
+            // character was added on mod
+            j++; pos++;
+        } else if (lcs[k] && mod[j] == lcs[k]) {
+            // character was removed on orig
+            i++;
+        } else {
+            // character deleted and added
+            if (orig[i]) {
+                // deleted from orig
+                i++;
+            } 
+            if (mod[k]) {
+                // add to mod
+                j++; pos++;
+            }
+        }
+    }
+}
+
 
 int max(int a, int b) {
     if (a > b) {
@@ -295,7 +289,6 @@ int main(int argc, char * argv)
 
     char str1[] = "AGGTAB";
     char str2[] = "GXTXAYB";
-    lcs(str1, str2);
     char * result = lcs(str1, str2);
     printf("result lcs: \"%s\" \n", result);  
     free(result);
