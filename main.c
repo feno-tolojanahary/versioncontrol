@@ -142,10 +142,16 @@ char* lcs(const char* s1, const char* s2)
     return lcsStr;
 }
 
-void generateUpdateScript(char* orig, char* mod, char* lcs) {   
+Update* generateUpdateScript(char* orig, char* mod, char* lcs) {   
     int i = 0, j = 0, k = 0;
     int pos = 0;
 
+    Update* updateScripts = malloc(sizeof(Update) * sizeof(lcs));
+    if (updateScripts == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        return 1;
+    }
+    
     while(orig[i] || mod[j]) {
         if (lcs[k] && orig[i] == lcs[k] && mod[j] == lcs[k]) {
 
