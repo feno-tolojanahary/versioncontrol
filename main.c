@@ -9,6 +9,8 @@
 #define WORK_DIR "backup"
 
 int max(int a, int b);
+void * s_malloc(size_t size);
+void * s_realloc(void* ptr, size_t size);
 
 enum Action { INSERT, DELETE };
 
@@ -16,6 +18,39 @@ struct Update {
     Action type;
     char ch;
     int pos;
+}
+
+struct UpdateList {
+    Update* arr;
+    size_t size;
+    size_t max_cap;
+}
+
+void initialize_arr (UpdateList* upd_list) 
+{
+    upd_list->arr = (Update*)s_malloc(sizeof(Update) * 50);
+    upd_list->size = 0;
+    upd_list->max_cap = 50;
+}
+
+void add_update_list (UpdateList* upd_list, Update* upd) 
+{
+    size_t size = upd_list->size;
+    if (size == upd_list->max_cap) {
+        upd_list->arr = (Update*)s_realloc(upd_list->arr, sizeof(Update) * size * 2);
+        upd_list->max_cap = size * 2;
+    }
+    size++;
+    upd_list->arr[size].type = upd->type;
+    upd_list->arr[size].ch = upd->ch;
+    upd_list->arr[size].pos = upd->pos;
+}
+
+void free_upd_list(UpdateList* upd_list) 
+{
+    upd_list->arr = NULL;
+    upd_list->size = 0;
+    upd_list->max_cap = 0;
 }
 
 void create_dir(char * dir_name) 
@@ -142,40 +177,80 @@ char* lcs(const char* s1, const char* s2)
     return lcsStr;
 }
 
-Update* generateUpdateScript(char* orig, char* mod, char* lcs) {   
+UpdateList* generateUpdateScript(char* orig, char* mod, char* lcs, UpdateList* upd_list) {   
     int i = 0, j = 0, k = 0;
     int pos = 0;
 
-    Update* updateScripts = malloc(sizeof(Update) * sizeof(lcs));
-    if (updateScripts == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        return 1;
-    }
+    Update* upd = s_malloc(sizeof(Update) * sizeof(lcs));
     
     while(orig[i] || mod[j]) {
         if (lcs[k] && orig[i] == lcs[k] && mod[j] == lcs[k]) {
-
             i++; j++; pos++;
         } else if (lcs[k] && orig[i] == lcs[k]) {
             // character was added on mod
+            upd->type = INSERT;
+            upd->ch = orig[i];
+            upd->pos = pos;
+            add_update_list(upd_list, upd);
             j++; pos++;
         } else if (lcs[k] && mod[j] == lcs[k]) {
             // character was removed on orig
+            upd->type = DELETE;
+            upd->ch = mod[j];
+            upd->pos = pos;
+            add_update_list(upd_list, upd);
             i++;
         } else {
             // character deleted and added
             if (orig[i]) {
                 // deleted from orig
+                upd->type = DELETE;
+                upd->ch = orig[i];
+                upd->pos = pos;
+                add_update_list(upd_list, upd);
                 i++;
             } 
             if (mod[k]) {
                 // add to mod
+                upd->type = INSERT;
+                upd->ch = mod[k];
+                upd->pos = pos;
+                add_update_list(upd_list, upd);
                 j++; pos++;
             }
         }
     }
+    free(upd);
 }
 
+char* applyUpdateScript(UpdateList* updateLst, char* original) 
+{
+    size_t max = updateLst->size + strlen(original);
+    char* result = s_malloc(sizeof(char) * max);
+    strcpy(result, original);
+    size_t len = strlen(result);
+
+    for (int e = 0; e < updateLst->size; e++) {
+        Update* upd = updateLst[e];
+        if (upd->type == INSERT) {
+            // move string to the rigth
+            for (int i = len; i > upd->pos; i--) {
+                result[i] = result[i-1];
+            }
+            len++;
+            result[upd->pos] = upd->ch;
+            result[len] = '\0';
+        } else if (upd->type == DELETE) {
+            // move string to the left
+            for (int i = upd->pos; i < len; i++) {
+                result[i] = result[i+1];
+            }
+            len--;
+            result[len] = '\0';
+        }
+    }
+    return result;
+}
 
 int max(int a, int b) {
     if (a > b) {
